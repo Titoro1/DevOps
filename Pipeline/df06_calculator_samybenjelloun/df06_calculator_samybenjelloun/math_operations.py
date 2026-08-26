@@ -15,5 +15,3 @@ def divide(arg1: float, arg2: float) -> float:
         raise ZeroDivisionError("arg2 cannot be 0, since you cannot divide by 0")
     return arg1 / arg2
 
-
-# Pipeline test
