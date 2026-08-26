@@ -1,13 +1,17 @@
 name: CI
 
 on:
-  pull_request:
+  push:
     branches:
       - main
 
 jobs:
   test:
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: Pipeline/df06_calculator_samybenjelloun
 
     steps:
       - name: Checkout repository
@@ -16,7 +20,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: '3.13'
 
       - name: Install dependencies
         run: |
@@ -24,4 +28,4 @@ jobs:
           uv sync
 
       - name: Run tests
-        run: uv run pytest
+        run: uv run python -m pytest
