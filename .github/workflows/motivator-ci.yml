@@ -1,0 +1,104 @@
+name: Motivator CI/CD
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'Pipeline/motivator/**'
+
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'Pipeline/motivator/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: Pipeline/motivator
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install dependencies
+        run: |
+          pip install uv
+          uv sync
+
+      - name: Run pytest
+        run: uv run python -m pytest --junitxml=test-results.xml
+
+      - name: Check CLI works
+        run: |
+          uv run python -m motivator.cli
+          uv run python -m motivator.cli --extreme
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: motivator-test-results
+          path: Pipeline/motivator/test-results.xml
+
+  build:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: Pipeline/motivator
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install dependencies
+        run: |
+          pip install uv
+          uv sync
+
+      - name: Build package
+        run: uv build
+
+      - name: Upload dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: motivator-dist
+          path: Pipeline/motivator/dist
+    
+  publish:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download dist artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: motivator-dist
+          path: dist
+
+      - name: Install publishing tools
+        run: pip install twine
+      
+      - name: Publish package to TestPyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.TEST_PYPI_API_TOKEN }}
+        run: python -m twine upload --repository testpypi dist/*
